@@ -14,6 +14,7 @@ class Bullet:
         self.rect = pygame.Rect(x, y, 5, 5)
         self.rotation = rotation
         self.player = player
+        self.uuid = 0
 
     def move(self, delta):
         motion = pygame.Vector2(
@@ -119,10 +120,6 @@ class Player:
         self.rotation = math.degrees(math.atan2(mouse_y - self.y, mouse_x - self.x))
 
         self.crosshair.move(pygame.Vector2(mouse[0], mouse[1]))
-
-        if self.is_shooting() and self.cooldown <= 0:
-            self.game.add_bullet(Bullet(self.x, self.y, self.rotation, self))
-            self.cooldown = 1
 
         if self.cooldown >= 0.0:
             self.cooldown -= 1 * delta

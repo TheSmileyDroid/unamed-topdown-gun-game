@@ -1,39 +1,61 @@
 import threading
 import time
 from threading import Semaphore
+from typing import Any
 
 import pygame
 
 import config
 import Network
 import Server
-from Player import Player
+from Player import Bullet, Player
 from PlayerOverNetwork import PlayerOverNetwork
 
 
 def receive(game):
     while True:
-        time.sleep(0.1)
+        time.sleep(0.05)
         state = Network.receive_broadcast(Server.sock)
         game.semaphore.acquire()
         if state:
             for player in game.players:
-                if player.uuid in state:
-                    Network.deserialize_state(state[player.uuid], player)
-                    del state[player.uuid]
-            for uuid in state:
+                if player.uuid in state["players"]:
+                    if player.uuid != game.client_player.uuid:
+                        Network.deserialize_state(state["players"][player.uuid], player)
+                    del state["players"][player.uuid]
+                else:
+                    game.players.remove(player)
+                    print("Player Left", player.uuid)
+
+            for uuid in state["players"]:
                 player = PlayerOverNetwork(game, Server.sock, Server.address)
                 player.uuid = uuid
                 print("New Player", player.uuid)
-                Network.deserialize_state(state[uuid], player)
+                Network.deserialize_state(state["players"][uuid], player)
                 game.players.append(player)
+
+            for bullet in game.bullets:
+                if bullet.uuid in state["bullets"]:
+                    Network.deserialize_state_bullet(
+                        state["bullets"][bullet.uuid], bullet
+                    )
+                    del state["bullets"][bullet.uuid]
+                else:
+                    game.bullets.remove(bullet)
+
+            for uuid in state["bullets"]:
+                bullet = Bullet(0, 0, 0, None)
+                bullet.uuid = uuid
+                Network.deserialize_state_bullet(state["bullets"][uuid], bullet)
+                game.bullets.append(bullet)
+
         game.semaphore.release()
 
 
 def send(game):
     while True:
-        Network.broadcast_state(game.players)
-        time.sleep(0.1)
+        time.sleep(0.05)
+        Network.broadcast_state(game.players, game.bullets, Server.sock)
 
 
 class Game:
@@ -42,8 +64,10 @@ class Game:
         self.bullets = []
         self.delta = 0.0
         self.last_id = 1
+        self.last_bullet = 1
         self.semaphore = Semaphore(1)
         self.running = True
+        self.client_player: Any | None = None
 
         if Server.is_server:
             self.send_thread = threading.Thread(target=send, args=(self,))
@@ -66,6 +90,10 @@ class Game:
 
         for player in self.players:
             player.move(self.delta)
+
+            if player.is_shooting() and player.cooldown <= 0:
+                self.add_bullet(Bullet(player.x, player.y, player.rotation, player))
+                player.cooldown = 1
 
         for bullet in self.bullets:
             bullet.move(self.delta)
@@ -125,6 +153,7 @@ class Game:
             )
 
     def add_bullet(self, bullet):
+        bullet.uuid = self.last_bullet
         self.bullets.append(bullet)
 
 

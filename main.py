@@ -49,6 +49,7 @@ async def main():
 
     player1 = Player(game)
     game.add_player(player1)
+    game.client_player = player1
 
     new_players = None
 
