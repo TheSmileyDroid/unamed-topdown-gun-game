@@ -1,9 +1,39 @@
+import threading
+import time
 from threading import Semaphore
 
 import pygame
 
 import config
+import Network
+import Server
 from Player import Player
+from PlayerOverNetwork import PlayerOverNetwork
+
+
+def receive(game):
+    while True:
+        time.sleep(0.1)
+        state = Network.receive_broadcast(Server.sock)
+        game.semaphore.acquire()
+        if state:
+            for player in game.players:
+                if player.uuid in state:
+                    Network.deserialize_state(state[player.uuid], player)
+                    del state[player.uuid]
+            for uuid in state:
+                player = PlayerOverNetwork(game, Server.sock, Server.address)
+                player.uuid = uuid
+                print("New Player", player.uuid)
+                Network.deserialize_state(state[uuid], player)
+                game.players.append(player)
+        game.semaphore.release()
+
+
+def send(game):
+    while True:
+        Network.broadcast_state(game.players)
+        time.sleep(0.1)
 
 
 class Game:
@@ -11,9 +41,19 @@ class Game:
         self.players = []
         self.bullets = []
         self.delta = 0.0
-        self.last_id = 0
+        self.last_id = 1
         self.semaphore = Semaphore(1)
         self.running = True
+
+        if Server.is_server:
+            self.send_thread = threading.Thread(target=send, args=(self,))
+            self.send_thread.daemon = True
+            self.send_thread.start()
+
+        if Server.is_client:
+            self.receive_thread = threading.Thread(target=receive, args=(self,))
+            self.receive_thread.daemon = True
+            self.receive_thread.start()
 
     def add_player(self, player: Player) -> None:
         print(f"Player {len(self.players) + 1} joined")
@@ -23,6 +63,7 @@ class Game:
 
     def update(self) -> None:
         self.semaphore.acquire()
+
         for player in self.players:
             player.move(self.delta)
 
