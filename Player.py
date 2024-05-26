@@ -54,6 +54,7 @@ class Player:
         self.hp = 100
         self.max_hp = 100
         self.score = 0
+        self.uuid = 0
 
     @property
     def y(self):

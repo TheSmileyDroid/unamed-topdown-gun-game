@@ -1,4 +1,6 @@
 import math
+import pickle
+from socket import socket
 
 import pygame
 
@@ -11,22 +13,15 @@ class PlayerOverNetwork(Player):
     def __init__(
         self,
         game,
-        connection,
+        connection: socket,
         client_address,
-        ai=None,
-        controls={
-            "up": pygame.K_w,
-            "down": pygame.K_s,
-            "left": pygame.K_a,
-            "right": pygame.K_d,
-            "shoot": pygame.K_SPACE,
-        },
         color=(255, 255, 255),
     ):
+        self.uuid = 0
         self.speed = 300
         self.rect = pygame.Rect(200, 200, 32, 32)
-        self.ai = ai
-        self.controls = ai.get_controller() if ai else controls
+        self.connection = connection
+        self.client_address = client_address
         self.color = color
         self.rotation = 0
         self.cooldown = 0
@@ -108,3 +103,33 @@ class PlayerOverNetwork(Player):
         pygame.draw.rect(screen, self.color, self.rect)
 
         self.crosshair.draw(screen)
+
+    def receive_update(self):
+        try:
+            data = self.connection.recv(1024)
+            if data:
+                state = pickle.loads(data)
+                self.deserialize_state(state)
+        except Exception as e:
+            print(f"Failed to receive update: {e}")
+
+    def serialize_state(self):
+        """Serialize the player's state."""
+        return {
+            "position": (self.x, self.y),
+            "rotation": self.rotation,
+            "hp": self.hp,
+            "score": self.score,
+            "is_shooting": self.is_shooting(),
+        }
+
+    @classmethod
+    def deserialize_state(cls, state):
+        """Deserialize the player's state."""
+        player = cls.__new__(cls)
+        player.x, player.y = state["position"]
+        player.rotation = state["rotation"]
+        player.hp = state["hp"]
+        player.score = state["score"]
+        player.cooldown = 0  # Reset cooldown on deserialization
+        return player
