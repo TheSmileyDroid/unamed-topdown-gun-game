@@ -3,8 +3,6 @@ import math
 import pygame
 
 import config
-import Network
-import Server
 from Crosshair import Crosshair
 
 
@@ -17,10 +15,7 @@ class Bullet:
         self.uuid = 0
 
     def move(self, delta):
-        motion = pygame.Vector2(
-            math.cos(math.radians(self.rotation)),
-            math.sin(math.radians(self.rotation)),
-        )
+        motion = pygame.Vector2(math.cos(math.radians(self.rotation)), math.sin(math.radians(self.rotation)), )
 
         motion = motion.normalize() * self.speed * delta
 
@@ -32,19 +27,11 @@ class Bullet:
 
 
 class Player:
-    def __init__(
-        self,
-        game,
-        ai=None,
-        controls={
-            "up": pygame.K_w,
-            "down": pygame.K_s,
-            "left": pygame.K_a,
-            "right": pygame.K_d,
-            "shoot": pygame.K_SPACE,
-        },
-        color=(255, 255, 255),
-    ):
+    def __init__(self, game, team=0, ai=None, controls=None, color=(255, 255, 255), ):
+        self.team = team
+        if controls is None:
+            controls = {"up": pygame.K_w, "down": pygame.K_s, "left": pygame.K_a, "right": pygame.K_d,
+                        "shoot": pygame.K_SPACE, }
         self.speed = 300
         self.rect = pygame.Rect(200, 200, 32, 32)
         self.ai = ai
@@ -80,6 +67,8 @@ class Player:
         return self.ai is not None or pygame.mouse.get_pressed()[0]
 
     def move(self, delta: float) -> None:
+        if self.ai is not None:
+            self.ai.update(self.game)
         if self.ai is None:
             keys = pygame.key.get_pressed()
         else:
@@ -123,9 +112,6 @@ class Player:
 
         if self.cooldown >= 0.0:
             self.cooldown -= 1 * delta
-
-        if Server.is_client:
-            Network.send_state(self, Server.sock)
 
     def draw(self, screen):
         pygame.draw.rect(screen, self.color, self.rect)

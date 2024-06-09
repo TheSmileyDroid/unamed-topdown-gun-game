@@ -1,61 +1,9 @@
-import threading
-import time
-from threading import Semaphore
 from typing import Any
 
 import pygame
 
 import config
-import Network
-import Server
 from Player import Bullet, Player
-from PlayerOverNetwork import PlayerOverNetwork
-
-
-def receive(game):
-    while True:
-        time.sleep(0.05)
-        state = Network.receive_broadcast(Server.sock)
-        game.semaphore.acquire()
-        if state:
-            for player in game.players:
-                if player.uuid in state["players"]:
-                    if player.uuid != game.client_player.uuid:
-                        Network.deserialize_state(state["players"][player.uuid], player)
-                    del state["players"][player.uuid]
-                else:
-                    game.players.remove(player)
-                    print("Player Left", player.uuid)
-
-            for uuid in state["players"]:
-                player = PlayerOverNetwork(game, Server.sock, Server.address)
-                player.uuid = uuid
-                print("New Player", player.uuid)
-                Network.deserialize_state(state["players"][uuid], player)
-                game.players.append(player)
-
-            for bullet in game.bullets:
-                if bullet.uuid in state["bullets"]:
-                    Network.deserialize_state_bullet(
-                        state["bullets"][bullet.uuid], bullet
-                    )
-                    del state["bullets"][bullet.uuid]
-                else:
-                    game.bullets.remove(bullet)
-
-            for uuid in state["bullets"]:
-                bullet = Bullet(0, 0, 0, None)
-                bullet.uuid = uuid
-                Network.deserialize_state_bullet(state["bullets"][uuid], bullet)
-                game.bullets.append(bullet)
-
-        game.semaphore.release()
-
-
-def send(game):
-    while True:
-        time.sleep(0.05)
-        Network.broadcast_state(game.players, game.bullets, Server.sock)
 
 
 class Game:
@@ -65,19 +13,8 @@ class Game:
         self.delta = 0.0
         self.last_id = 1
         self.last_bullet = 1
-        self.semaphore = Semaphore(1)
         self.running = True
         self.client_player: Any | None = None
-
-        if Server.is_server:
-            self.send_thread = threading.Thread(target=send, args=(self,))
-            self.send_thread.daemon = True
-            self.send_thread.start()
-
-        if Server.is_client:
-            self.receive_thread = threading.Thread(target=receive, args=(self,))
-            self.receive_thread.daemon = True
-            self.receive_thread.start()
 
     def add_player(self, player: Player) -> None:
         print(f"Player {len(self.players) + 1} joined")
@@ -86,7 +23,6 @@ class Game:
         self.players.append(player)
 
     def update(self) -> None:
-        self.semaphore.acquire()
 
         for player in self.players:
             player.move(self.delta)
@@ -112,14 +48,8 @@ class Game:
                         self.players.remove(player)
                     break
             if (
-                bullet.rect.x < 0
-                or bullet.rect.x > config.WIDTH
-                or bullet.rect.y < 0
-                or bullet.rect.y > config.HEIGHT
-            ):
+                    bullet.rect.x < 0 or bullet.rect.x > config.WIDTH or bullet.rect.y < 0 or bullet.rect.y > config.HEIGHT):
                 self.bullets.remove(bullet)
-
-        self.semaphore.release()
 
     def draw(self, screen: pygame.Surface) -> None:
         for player in self.players:
@@ -130,27 +60,13 @@ class Game:
 
         for i, player in enumerate(self.players):
             # HP bar player.hp / player.max_hp
-            pygame.draw.rect(
-                screen,
-                (255, 0, 0),
-                (
-                    player.rect.x,
-                    player.rect.y - 10,
-                    player.hp / player.max_hp * player.rect.width,
-                    5,
-                ),
-            )
+            pygame.draw.rect(screen, (255, 0, 0),
+                (player.rect.x, player.rect.y - 10, player.hp / player.max_hp * player.rect.width, 5,), )
 
             # Score
             font = pygame.font.Font(None, 24)
-            text = font.render(
-                f"{'AI' if player.ai else 'Player'} {i + 1} Score: {player.score}",
-                True,
-                player.color,
-            )
-            screen.blit(
-                text, (config.WIDTH - max(text.get_width(), 270) - 10, 10 + i * 30)
-            )
+            text = font.render(f"{'AI' if player.ai else 'Player'} {i + 1} Score: {player.score}", True, player.color, )
+            screen.blit(text, (config.WIDTH - max(text.get_width(), 270) - 10, 10 + i * 30))
 
     def add_bullet(self, bullet):
         bullet.uuid = self.last_bullet
