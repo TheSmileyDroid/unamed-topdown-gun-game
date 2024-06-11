@@ -49,7 +49,7 @@ def main(is_train=False):
             time = 0
 
         pygame.display.flip()
-        if not (game.fast_forward and is_train):
+        if not (game.fast_forward or not is_train):
             time += game.clock.tick()
             delta = 0.016
         else:

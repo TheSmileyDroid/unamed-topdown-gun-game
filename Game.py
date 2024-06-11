@@ -59,11 +59,11 @@ class Game:
                 if player.rect.colliderect(bullet.rect):
                     self.bullets.remove(bullet)
                     player.hp -= 10
-                    player.score -= 10
+                    player.score -= 100
                     bullet.player.score += 1000
                     if player.hp <= 0:
                         bullet.player.score += 10000
-                        player.score -= 100
+                        player.score -= 10000
                     break
             if (
                 bullet.rect.x < 0
@@ -71,7 +71,10 @@ class Game:
                 or bullet.rect.y < 0
                 or bullet.rect.y > config.HEIGHT
             ):
-                self.bullets.remove(bullet)
+                try:
+                    self.bullets.remove(bullet)
+                except ValueError:
+                    pass
 
     def draw(self) -> None:
         for player in self.players:
