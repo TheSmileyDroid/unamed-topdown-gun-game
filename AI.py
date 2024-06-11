@@ -32,7 +32,10 @@ class AI:
         self.epsilon = 0  # aleatorização
         self.gamma = 0.9  # discount rate
         self.memory = deque(maxlen=MAX_MEMORY)
-        self.model = ppo.ActorPPO(64, 8, torch.device("cpu"))
+        self.device = torch.device("cpu")
+        if torch.cuda.is_available():
+            self.device = torch.device("cuda")
+        self.model = ppo.ActorPPO(64, 8, self.device)
         self.trainer = QTrainer(self.model, lr=LEARNING_RATE, gamma=self.gamma)
         self.is_train = is_train
         self.old_state = None
