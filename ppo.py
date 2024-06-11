@@ -1,3 +1,4 @@
+import os
 import random as rd
 
 import numpy as np
@@ -58,9 +59,13 @@ class ActorPPO(nn.Module):
         return loss.item()
 
     def save(self, path):
+        if not os.path.exists("models"):
+            os.makedirs("models")
         with open(path, "wb") as f:
             torch.save(self.state_dict(), f)
 
     def load(self, path):
+        if not os.path.exists(path):
+            return
         with open(path, "rb") as f:
             self.load_state_dict(torch.load(f))
