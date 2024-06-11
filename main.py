@@ -23,6 +23,13 @@ def main(is_train=False):
         player1.ai.model.net.train()
         player2.ai.model.net.train()
 
+    player1.hp = 100
+    player2.hp = 100
+    player1.x = 100
+    player2.x = 300
+    player1.y = 100
+    player2.y = 300
+
     delta = 0.0
 
     time = 0
@@ -46,8 +53,12 @@ def main(is_train=False):
             if player1.hp <= 0 or player2.hp <= 0:
                 player1.hp = 100
                 player2.hp = 100
+                player1.x = 100
+                player2.x = 100
+                player1.y = 300
+                player2.y = 300
 
-        if is_train and time > 100:
+        if is_train and time > 1000:
             player1.ai.model.save("models/model1.pth")
             player2.ai.model.save("models/model2.pth")
             time = 0
