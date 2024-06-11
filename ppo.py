@@ -26,6 +26,10 @@ class ActorPPO(nn.Module):
         self.optimizer = torch.optim.Adam(self.net.parameters(), lr=0.001)
 
     def forward(self, state):
+        if isinstance(state, np.ndarray):
+            state = torch.from_numpy(state).float().to(self.device)
+        else:
+            state = state.to(self.device)
         return self.net(state)
 
     def act(self, state, eps=0.1) -> np.ndarray:
