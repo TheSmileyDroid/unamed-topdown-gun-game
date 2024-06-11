@@ -11,7 +11,9 @@ def main(is_train=False):
     )
     game.add_player(player1)
 
-    player2 = Player(game, 1, color=(255, 0, 0))
+    player2 = Player(
+        game, 1, ai=AI(is_train, model_path="models/model2.pth"), color=(0, 0, 255)
+    )
     game.add_player(player2)
 
     player1.ai.model.load("models/model1.pth")
