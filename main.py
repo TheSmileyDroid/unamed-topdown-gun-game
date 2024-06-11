@@ -11,9 +11,7 @@ def main(is_train=False):
     )
     game.add_player(player1)
 
-    player2 = Player(
-        game, 1, ai=AI(is_train, model_path="models/model2.pth"), color=(255, 0, 0)
-    )
+    player2 = Player(game, 1, color=(255, 0, 0))
     game.add_player(player2)
 
     player1.ai.model.load("models/model1.pth")
@@ -60,7 +58,7 @@ def main(is_train=False):
 
         if is_train and time > 1000:
             player1.ai.model.save("models/model1.pth")
-            player2.ai.model.save("models/model2.pth")
+            # player2.ai.model.save("models/model2.pth")
             time = 0
 
         pygame.display.flip()

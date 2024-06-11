@@ -61,7 +61,8 @@ class Player:
         self.score = 0
         self.uuid = 0
         self.motion = pygame.Vector2(0, 0)
-        self.ai.set_player(self)
+        if ai is not None:
+            self.ai.set_player(self)
 
     @property
     def y(self):
@@ -110,12 +111,16 @@ class Player:
 
         if self.x + self.motion.x < 0:
             self.x = 0
+            self.score -= 100
         if self.x + self.motion.x > config.WIDTH:
             self.x = config.WIDTH
+            self.score -= 100
         if self.y + self.motion.y < 0:
             self.y = 0
+            self.score -= 100
         if self.y + self.motion.y > config.HEIGHT:
             self.y = config.HEIGHT
+            self.score -= 100
 
         self.x += self.motion.x
         self.y += self.motion.y
