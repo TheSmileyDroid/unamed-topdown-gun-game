@@ -20,9 +20,9 @@ class ActorPPO(nn.Module):
             nn.Linear(64, self.action_dim, device=self.device),
             nn.Sigmoid(),
         )
-        if torch.cuda.is_available():
-            self.net.cuda()
+        self.net.to(self.device)
         self.critic = nn.MSELoss()
+        self.critic.to(self.device)
         self.optimizer = torch.optim.Adam(self.net.parameters(), lr=0.001)
 
     def forward(self, state):
