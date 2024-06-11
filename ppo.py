@@ -13,11 +13,11 @@ class ActorPPO(nn.Module):
         self.action_dim = action_dim
         self.device = device
         self.net = nn.Sequential(
-            nn.Linear(self.state_dim, 64),
+            nn.Linear(self.state_dim, 64, device=self.device),
             nn.ReLU(),
-            nn.Linear(64, 64),
+            nn.Linear(64, 64, device=self.device),
             nn.ReLU(),
-            nn.Linear(64, self.action_dim),
+            nn.Linear(64, self.action_dim, device=self.device),
             nn.Sigmoid(),
         )
         self.critic = nn.MSELoss()
@@ -31,7 +31,7 @@ class ActorPPO(nn.Module):
         action = self.net(state)
         if rd.random() < eps:
             action = torch.rand(self.action_dim).to(self.device)
-        return action.cpu().detach().numpy()
+        return action.detach().cpu().numpy()
 
     def update(self, state, action, reward, next_state, done):
         state = torch.from_numpy(state).float().to(self.device)
