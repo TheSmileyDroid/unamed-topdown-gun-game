@@ -19,6 +19,10 @@ def main(is_train=False):
     player1.ai.model.load("models/model1.pth")
     player2.ai.model.load("models/model2.pth")
 
+    if is_train:
+        player1.ai.model.net.train()
+        player2.ai.model.net.train()
+
     delta = 0.0
 
     time = 0
