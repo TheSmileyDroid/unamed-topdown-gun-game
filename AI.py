@@ -3,6 +3,7 @@ from collections import deque
 
 import numpy as np
 import torch
+from numpy import ndarray
 
 import config
 import ppo
@@ -21,7 +22,9 @@ STATES_PER_BULLET = 2
 
 
 class AI:
-    def __init__(self, is_train=False):
+    def __init__(self, is_train=False, model_path=None):
+        self.player = None
+        self.old_reward = None
         self.old_action = None
         self.mouse = (0, 0)
         self.keys = [random.choice([False, True]) for _ in range(5)]
@@ -33,6 +36,10 @@ class AI:
         self.trainer = QTrainer(self.model, lr=LEARNING_RATE, gamma=self.gamma)
         self.is_train = is_train
         self.old_state = None
+        self.model_path = model_path
+
+    def set_player(self, player):
+        self.player = player
 
     def get_enemies(self, game):
         ai_player: Player = self.get_player(game)
@@ -67,13 +74,13 @@ class AI:
         state[6] = ai_player.uuid
         state[7] = ai_player.cooldown
         i = 8
-        i = self.save_state(enemies, i, state)
-        self.save_state(allies, i, state)
+        i = self.save_state_from(enemies, i, state)
+        self.save_state_from(allies, i, state)
 
         return state
 
     @staticmethod
-    def save_state(enemies, i, state):
+    def save_state_from(enemies, i, state):
         for enemy in enemies:
             state[i] = enemy.y
             state[i + 1] = enemy.x
@@ -98,32 +105,28 @@ class AI:
         states, actions, rewards, next_states, dones = zip(*minibatch)
         self.trainer.train_step(states, actions, rewards, next_states, dones)
 
-    def train_short_memory(self, state, action, reward, next_state, done):
-        self.trainer.train_step(state, action, reward, next_state, done)
+    def train_short_memory(self, state):
+        self.trainer.train_step(
+            self.old_state, self.old_action, self.old_reward, state, False
+        )
 
-    def get_action(self, state: np.ndarray) -> list[float]:
-        self.epsilon = 210 - self.number_of_games
-        if random.randint(0, 200) < self.epsilon:
-            move_up = random.choice([0, 1])
-            move_left = random.choice([0, 1])
-            move_right = random.choice([0, 1])
-            move_down = random.choice([0, 1])
-            shooting = random.choice([0, 1])
-            mouse_x = random.randint(0, config.WIDTH)
-            mouse_y = random.randint(0, config.HEIGHT)
-            final_move = [
-                move_up,
-                move_left,
-                move_right,
-                move_down,
-                shooting,
-                mouse_x,
-                mouse_y,
-            ]
-        else:
-            state0 = torch.tensor(state)
-            prediction: np.ndarray = self.model.act(state0)
-            final_move = prediction
+    def get_action(self, state: np.ndarray) -> ndarray:
+        self.epsilon = 0.3 if self.is_train else 0.1
+        prediction: np.ndarray = self.model.act(state, self.epsilon)
+        final_move = prediction
+        final_move[0] = 1 if final_move[0] > 0.5 else 0
+        final_move[1] = 1 if final_move[1] > 0.5 else 0
+        final_move[2] = 1 if final_move[2] > 0.5 else 0
+        final_move[3] = 1 if final_move[3] > 0.5 else 0
+        final_move[4] = 1 if final_move[4] > 0.5 else 0
+        final_move[5] = final_move[5] * config.WIDTH
+        final_move[6] = final_move[6] * config.HEIGHT
+        self.old_action = prediction
+        self.old_state = state
+        self.old_reward = self.player.score
+
+        if self.is_train and self.old_state is not None and self.player is not None:
+            self.train_short_memory(state)
 
         return final_move
 

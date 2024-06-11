@@ -41,11 +41,13 @@ class Game:
             self.fast_forward = False
 
         for player in self.players:
-            player.move(self.delta)
+            player.score -= 1
+            if player.hp >= 0:
+                player.move(self.delta)
 
-            if player.is_shooting() and player.cooldown <= 0:
-                self.add_bullet(Bullet(player.x, player.y, player.rotation, player))
-                player.cooldown = 1
+                if player.is_shooting() and player.cooldown <= 0:
+                    self.add_bullet(Bullet(player.x, player.y, player.rotation, player))
+                    player.cooldown = 1
 
         for bullet in self.bullets:
             bullet.move(self.delta)
@@ -58,10 +60,10 @@ class Game:
                     self.bullets.remove(bullet)
                     player.hp -= 10
                     player.score -= 10
-                    bullet.player.score += 10
+                    bullet.player.score += 1000
                     if player.hp <= 0:
-                        bullet.player.score += 100
-                        self.players.remove(player)
+                        bullet.player.score += 10000
+                        player.score -= 100
                     break
             if (
                 bullet.rect.x < 0

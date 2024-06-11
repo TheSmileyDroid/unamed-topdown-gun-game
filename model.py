@@ -35,13 +35,11 @@ class QTrainer:
 
     def train_step(self, state, action, reward, next_state, done):
         state = torch.tensor(state, dtype=torch.float)
-        next_state = torch.tensor(next_state, dtype=torch.float)
         action = torch.tensor(action, dtype=torch.float)
         reward = torch.tensor(reward, dtype=torch.float)
 
         if len(state.shape) == 1:
             state = torch.unsqueeze(state, 0)
-            next_state = torch.unsqueeze(next_state, 0)
             action = torch.unsqueeze(action, 0)
             reward = torch.unsqueeze(reward, 0)
             done = (done,)
@@ -50,11 +48,11 @@ class QTrainer:
 
         target = pred.clone()
 
-        for index in range(len(done)):
-            q_new = reward[index]
-            if not done[index]:
-                q_new = reward + self.gamma * torch.max(self.model(next_state[index]))
-            target[index][torch.argmax(action).item()] = q_new
+        for i in range(len(done)):
+            if done[i]:
+                target[i] = reward[i]
+            else:
+                target[i] = reward[i] + self.gamma * target[i]
 
         self.optimizer.zero_grad()
         loss = self.criterion(target, pred)

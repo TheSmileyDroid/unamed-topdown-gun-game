@@ -15,7 +15,10 @@ class Bullet:
         self.uuid = 0
 
     def move(self, delta):
-        motion = pygame.Vector2(math.cos(math.radians(self.rotation)), math.sin(math.radians(self.rotation)), )
+        motion = pygame.Vector2(
+            math.cos(math.radians(self.rotation)),
+            math.sin(math.radians(self.rotation)),
+        )
 
         motion = motion.normalize() * self.speed * delta
 
@@ -27,11 +30,23 @@ class Bullet:
 
 
 class Player:
-    def __init__(self, game, team=0, ai=None, controls=None, color=(255, 255, 255), ):
+    def __init__(
+        self,
+        game,
+        team=0,
+        ai=None,
+        controls=None,
+        color=(255, 255, 255),
+    ):
         self.team = team
         if controls is None:
-            controls = {"up": pygame.K_w, "down": pygame.K_s, "left": pygame.K_a, "right": pygame.K_d,
-                        "shoot": pygame.K_SPACE, }
+            controls = {
+                "up": pygame.K_w,
+                "down": pygame.K_s,
+                "left": pygame.K_a,
+                "right": pygame.K_d,
+                "shoot": pygame.K_SPACE,
+            }
         self.speed = 300
         self.rect = pygame.Rect(200, 200, 32, 32)
         self.ai = ai
@@ -46,6 +61,7 @@ class Player:
         self.score = 0
         self.uuid = 0
         self.motion = pygame.Vector2(0, 0)
+        self.ai.set_player(self)
 
     @property
     def y(self):

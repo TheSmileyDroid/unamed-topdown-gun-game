@@ -6,17 +6,29 @@ from Player import Player
 
 
 def main(is_train=False):
-    player1 = Player(game, 0, ai=AI(is_train), color=(0, 255, 0))
+    player1 = Player(
+        game, 0, ai=AI(is_train, model_path="models/model1.pth"), color=(0, 255, 0)
+    )
     game.add_player(player1)
 
-    player2 = Player(game, 1, ai=AI(is_train), color=(255, 0, 0))
+    player2 = Player(
+        game, 1, ai=AI(is_train, model_path="models/model2.pth"), color=(255, 0, 0)
+    )
     game.add_player(player2)
 
+    player1.ai.model.load("models/model1.pth")
+    player2.ai.model.load("models/model2.pth")
+
     delta = 0.0
+
+    time = 0
 
     while game.running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
+                if is_train:
+                    player1.ai.model.save("models/model1.pth")
+                    player2.ai.model.save("models/model2.pth")
                 game.running = False
         game.screen.fill((0, 0, 0))
 
@@ -26,12 +38,23 @@ def main(is_train=False):
 
         game.draw()
 
+        if is_train:
+            if player1.hp <= 0 or player2.hp <= 0:
+                player1.hp = 100
+                player2.hp = 100
+
+        if is_train and time > 100:
+            player1.ai.model.save("models/model1.pth")
+            player2.ai.model.save("models/model2.pth")
+            time = 0
+
         pygame.display.flip()
-        if game.fast_forward:
-            game.clock.tick()
+        if not (game.fast_forward and is_train):
+            time += game.clock.tick()
             delta = 0.016
         else:
             delta = game.clock.tick(60) / 1000.0
+            time += delta
 
     pygame.quit()
 
