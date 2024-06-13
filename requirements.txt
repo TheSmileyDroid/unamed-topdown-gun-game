@@ -5,3 +5,5 @@ pydantic~=2.7.3
 stable-baselines3
 gymnasium~=0.29.1
 opencv-python
+tqdm
+rich
