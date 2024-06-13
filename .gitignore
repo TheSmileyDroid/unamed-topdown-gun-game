@@ -162,3 +162,9 @@ cython_debug/
 #.idea/
 
 models/
+/.idea/.gitignore
+/.idea/misc.xml
+/.idea/modules.xml
+/.idea/inspectionProfiles/profiles_settings.xml
+/.idea/unamed-topdown-gun-game.iml
+/.idea/vcs.xml

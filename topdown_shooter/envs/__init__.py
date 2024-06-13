@@ -1,0 +1,1 @@
+from topdown_shooter.envs.topdown_shooter import TopDownShooterEnv
