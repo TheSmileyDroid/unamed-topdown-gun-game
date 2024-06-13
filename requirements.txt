@@ -1,9 +1,9 @@
-pygame~=2.5.2
-torch~=2.3.1
-numpy~=1.26.4
-pydantic~=2.7.3
+pygame
+torch
+numpy
+pydantic
 stable-baselines3
-gymnasium~=0.29.1
+gymnasium
 opencv-python
 tqdm
 rich
