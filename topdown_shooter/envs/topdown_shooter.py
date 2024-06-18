@@ -285,6 +285,17 @@ class TopDownShooterEnv(gym.Env):
         if self.render_mode == "rgb_array":
             return self._render_frame()
 
+    def _draw_gun(self, player: Player, color: tuple[int, int, int], canvas):
+        pos = (player.x + player.direction[0] * 8, player.y + player.direction[1] * 8)
+
+        pygame.draw.circle(
+            canvas,
+            color,
+            pos,
+            8,
+            0,
+        )
+
     def _render_frame(self):
         if self.window is None and self.render_mode == "human":
             pygame.init()
@@ -299,22 +310,26 @@ class TopDownShooterEnv(gym.Env):
 
         pygame.draw.circle(
             canvas,
-            (0, 0, 100),
+            (0, 0, 200),
             (self._agent.x, self._agent.y),
-            5,
+            8,
             0,
         )
+
+        self._draw_gun(self._agent, (0, 0, 200), canvas)
 
         for player in self._players:
             if player.health <= 0:
                 continue
             pygame.draw.circle(
                 canvas,
-                (100, 0, 0),
+                (200, 0, 0),
                 (player.x, player.y),
-                5,
+                8,
                 0,
             )
+
+            self._draw_gun(player, (200, 0, 0), canvas)
 
         for bullet in self._bullets:
             pygame.draw.circle(
