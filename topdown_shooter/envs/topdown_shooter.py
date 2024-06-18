@@ -4,7 +4,7 @@ import gymnasium as gym
 import numpy as np
 import pygame
 from gymnasium import spaces
-from gymnasium.core import ObsType, ActType
+from gymnasium.core import ActType, ObsType
 from pydantic import dataclasses
 
 
@@ -21,6 +21,12 @@ class Player:
 
     def distance(self, other):
         return np.linalg.norm((self.x - other.x, self.y - other.y), 2)
+
+    def nearest(self, others):
+        try:
+            return min([self.distance(other) for other in others])
+        except Exception:
+            return 0
 
     def to_dict(self):
         return {
@@ -66,57 +72,13 @@ class TopDownShooterEnv(gym.Env):
         ]
         self._bullets: list[Bullet] = []
         self.window_size = (640, 480)
-        self._observation_space = spaces.Dict(
-            {
-                "you": spaces.Dict(
-                    {
-                        "x": spaces.Box(low=0, high=self.window_size[0], shape=(1,)),
-                        "y": spaces.Box(low=0, high=self.window_size[1], shape=(1,)),
-                        "angle": spaces.Box(low=0, high=2 * np.pi, shape=(1,)),
-                        "health": spaces.Box(low=0, high=100, shape=(1,)),
-                    }
-                ),
-                "players": spaces.Tuple(
-                    [
-                        spaces.Dict(
-                            {
-                                "x": spaces.Box(
-                                    low=0, high=self.window_size[0], shape=(1,)
-                                ),
-                                "y": spaces.Box(
-                                    low=0, high=self.window_size[1], shape=(1,)
-                                ),
-                                "angle": spaces.Box(low=0, high=2 * np.pi, shape=(1,)),
-                                "health": spaces.Box(low=0, high=100, shape=(1,)),
-                            }
-                        )
-                    ]
-                    * 7,
-                ),
-                "near_bullets": spaces.Tuple(
-                    [
-                        spaces.Dict(
-                            {
-                                "x": spaces.Box(
-                                    low=0, high=self.window_size[0], shape=(1,)
-                                ),
-                                "y": spaces.Box(
-                                    low=0, high=self.window_size[1], shape=(1,)
-                                ),
-                                "angle": spaces.Box(low=0, high=2 * np.pi, shape=(1,)),
-                            }
-                        )
-                    ]
-                    * 10,
-                ),
-                "cooldown": spaces.Box(low=0, high=100, shape=(1,)),
-            }
+        self.observation_space = spaces.Box(
+            low=0, high=255, shape=(480, 640, 3), dtype=np.uint8
         )
-        self.observation_space = spaces.flatten_space(self._observation_space)
 
         self.action_space = spaces.MultiDiscrete(
-            [2, 2, 2, 2, 2, 2, 2]
-        )  # up, down, left, right, shoot, rotate_left, rotate_right
+            [3, 3, 2, 3]
+        )  # (up, down), (left, right), shoot, rotate_left, rotate_right
         assert render_mode is None or render_mode in self.metadata["render_modes"]
         self.render_mode = render_mode
 
@@ -136,20 +98,16 @@ class TopDownShooterEnv(gym.Env):
         return bullets
 
     def _get_obs(self):
-        return spaces.flatten(
-            self._observation_space,
-            {
-                "you": self._agent.to_dict(),
-                "players": tuple(map(lambda p: p.to_dict(), self._players)),
-                "near_bullets": tuple(
-                    map(lambda b: b.to_dict(), self._get_near_bullets())
-                ),
-                "cooldown": self._agent.cooldown,
-            },
-        )
+        obs = self._render_frame()
+
+        return obs
 
     def _get_info(self):
-        return {}
+        return {
+            "score": self._agent.score,
+            "distance_from_players": self._agent.nearest(self._players),
+            "distance_from_bullets": self._agent.nearest(self._bullets),
+        }
 
     def reset(
         self,
@@ -183,19 +141,19 @@ class TopDownShooterEnv(gym.Env):
     @staticmethod
     def _transform_actions(action):
         return {
-            "up": action[0],
-            "down": action[1],
-            "left": action[2],
-            "right": action[3],
-            "shoot": action[4],
-            "rotate_left": action[5],
-            "rotate_right": action[6],
+            "up": action[0] == 0,
+            "down": action[0] == 1,
+            "left": action[1] == 0,
+            "right": action[1] == 1,
+            "shoot": action[2] == 0,
+            "rotate_left": action[3] == 0,
+            "rotate_right": action[3] == 1,
         }
 
     def _shoot(self, player: Player):
         if player.cooldown > 0:
             return
-        player.cooldown = 0.5
+        player.cooldown = 0.1
         self._bullets.append(
             Bullet(
                 x=player.x,
@@ -289,7 +247,7 @@ class TopDownShooterEnv(gym.Env):
     def step(
         self, action: ActType
     ) -> tuple[ObsType, SupportsFloat, bool, bool, dict[str, Any]]:
-        action: dict = self._transform_actions(action)
+        transformed: dict = self._transform_actions(action)
 
         self._agent.cooldown -= 0.01
         self._agent.score = 0
@@ -297,24 +255,26 @@ class TopDownShooterEnv(gym.Env):
             player.cooldown -= 0.01
             player.score = 0
 
-        self._move(action)
+        self._move(transformed)
 
-        if action["shoot"]:
+        if transformed["shoot"]:
             self._shoot(self._agent)
 
-        self._rotate(action)
+        self._rotate(transformed)
 
         self._update_bullets()
 
         self._update_players()
 
-        terminated = not self._any_players_alive()
-        reward = 1000 if terminated else 0
-
-        reward += self._agent.score
+        terminated = not self._any_players_alive() or self._agent.health <= 0
+        reward = 1000 if not self._any_players_alive() else 0
 
         obs = self._get_obs()
         info = self._get_info()
+
+        reward += (info["distance_from_players"] - 20) * 0.5
+        reward += info["distance_from_bullets"] - 30
+        reward += info["score"]
 
         if self.render_mode == "human":
             self._render_frame()
@@ -365,7 +325,11 @@ class TopDownShooterEnv(gym.Env):
                 0,
             )
 
-        if self.render_mode == "human":
+        if (
+            self.render_mode == "human"
+            and self.window is not None
+            and self.clock is not None
+        ):
             self.window.blit(canvas, canvas.get_rect())
             pygame.event.pump()
             pygame.display.update()

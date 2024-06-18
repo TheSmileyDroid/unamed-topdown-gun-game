@@ -1,9 +1,9 @@
 import gymnasium as gym
-from stable_baselines3 import PPO
-from stable_baselines3.common.utils import set_random_seed
-from stable_baselines3.common.vec_env import SubprocVecEnv
 
 import topdown_shooter  # noqa
+from stable_baselines3 import A2C, PPO
+from stable_baselines3.common.utils import set_random_seed
+from stable_baselines3.common.vec_env import SubprocVecEnv
 
 
 def make_env(env_id: str, rank: int, seed: int = 0):
@@ -19,6 +19,7 @@ def make_env(env_id: str, rank: int, seed: int = 0):
     def _init():
         env = gym.make(env_id, render_mode="rgb_array")
         env.reset(seed=seed + rank)
+        print("rank", rank, "seed", seed)
         return env
 
     set_random_seed(seed)
@@ -31,15 +32,15 @@ def main():
 
     vec_env = SubprocVecEnv([make_env(env_id, i) for i in range(num_cpu)])
 
-    model = PPO("MlpPolicy", vec_env, verbose=1)
-    model.learn(total_timesteps=40000)
+    model = A2C("MlpPolicy", vec_env, verbose=1)
+    model.learn(total_timesteps=1000)
     model.save("topdown_shooter_model")
 
     # model.load("topdown_shooter_model")
 
     obs = vec_env.reset()
     for i in range(1000):
-        action, _states = model.predict(obs)
+        action, _states = model.predict(obs)  # type: ignore
         obs, rewards, dones, info = vec_env.step(action)
         vec_env.render(mode="human")
         # VecEnv resets automatically

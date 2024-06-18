@@ -168,3 +168,5 @@ models/
 /.idea/inspectionProfiles/profiles_settings.xml
 /.idea/unamed-topdown-gun-game.iml
 /.idea/vcs.xml
+topdown_shooter_model.zip
+.vscode/
