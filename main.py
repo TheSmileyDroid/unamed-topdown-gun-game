@@ -33,10 +33,9 @@ def main():
     vec_env = SubprocVecEnv([make_env(env_id, i) for i in range(num_cpu)])
 
     model = A2C("MlpPolicy", vec_env, verbose=1)
-    model.learn(total_timesteps=1000)
-    model.save("topdown_shooter_model")
-
-    # model.load("topdown_shooter_model")
+    model.load("topdown_shooter_model")
+    # model.learn(total_timesteps=1000)
+    # model.save("topdown_shooter_model")
 
     obs = vec_env.reset()
     for i in range(1000):

@@ -286,13 +286,13 @@ class TopDownShooterEnv(gym.Env):
             return self._render_frame()
 
     def _draw_gun(self, player: Player, color: tuple[int, int, int], canvas):
-        pos = (player.x + player.direction[0] * 8, player.y + player.direction[1] * 8)
+        pos = (player.x + np.cos(player.angle) * 8, player.y + np.sin(player.angle))
 
         pygame.draw.circle(
             canvas,
             color,
             pos,
-            8,
+            6,
             0,
         )
 
